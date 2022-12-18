@@ -92,6 +92,13 @@ namespace GhostLoader
 
         private IEnumerable<Task> GetLoadingTasks(IEnumerable<string> models)
         {
+            // TO DO: Parallelize Load Call.
+            /*
+            Parallel.ForEachAsync(models,
+                (string model) => LoadModel(model)
+            );
+            */
+
             var enumer = models.GetEnumerator();
             while(enumer.MoveNext())
             {

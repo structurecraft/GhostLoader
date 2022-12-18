@@ -185,10 +185,8 @@ namespace GhostLoader
             if (!DrawingItems.ContainsKey(document))
             {
                 await Task.Run(() => DrawingItems.TryAdd(document, fileObjects));
-                await Task.Run(() => GenBoxes(document));
             }
         }
-
 
     }
 
