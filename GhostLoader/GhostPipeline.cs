@@ -1,4 +1,4 @@
-﻿using Rhino.Display;
+using Rhino.Display;
 using Rhino.FileIO;
 using Rhino.Geometry;
 using Rhino.PlugIns;
@@ -141,14 +141,36 @@ namespace GhostLoader
 
         private void _DrawLowDetail(DrawEventArgs e, GeomCache cache)
         {
-            Line line = new Line(cache.Box.PointAt(0, 0.5, 0.5), cache.Box.PointAt(1, 0.5, 0.5));
-            e.Display.DrawLine(line, cache.Color, 1);
+            if (cache.Geometry is Curve curve)
+            {
+                e.Display.DrawCurve(curve, cache.Color);
+            }
+            else
+            {
+                Line line = new Line(cache.Box.PointAt(0, 0.5, 0.5), cache.Box.PointAt(1, 0.5, 0.5));
+                e.Display.DrawLine(line, cache.Color, 1);
+            }
         }
 
         private void _DrawHorizonDetail(DrawEventArgs e, GeomCache cache)
         {
+            Box _box = cache.Box;
+            if (cache.Geometry is Curve curve)
+            {
+                e.Display.DrawCurve(curve, cache.Color);
+                return;
+            }
+            else if (cache.Geometry is Brep brep)
+            {
+                Plane plane = Plane.WorldXY;
+                if (brep?.Surfaces?.FirstOrDefault()?.TryGetPlane(out plane, 10) != false)
+                {
+                    _box = new Box(plane, cache.Geometry);
+                }
+            }
+
             // TODO : Box needs to be better aligned
-            e.Display.DrawBox(cache.Box, cache.Color, 1);
+            e.Display.DrawBox(_box, cache.Color, 1);
         }
 
         private void _DrawPostHorizonDetail(DrawEventArgs e, GeomCache cache)
