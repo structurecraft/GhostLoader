@@ -69,7 +69,6 @@ namespace GhostLoader
             return new Box(plane, brep);
         }
 
-
         public static Box GetOptimalBoxFromGeometry(this GeometryBase geom)
             => geom switch
             {

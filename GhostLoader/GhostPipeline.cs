@@ -100,7 +100,7 @@ namespace GhostLoader
                 }
                 else // EVENT_HORIZON
                 {
-                    continue;
+                    _DrawPostHorizonDetail(e, cache);
                 }
 
             }
@@ -149,6 +149,11 @@ namespace GhostLoader
         {
             // TODO : Box needs to be better aligned
             e.Display.DrawBox(cache.Box, cache.Color, 1);
+        }
+
+        private void _DrawPostHorizonDetail(DrawEventArgs e, GeomCache cache)
+        {
+
         }
 
         public void CalculateBoundingBox(object sender, CalculateBoundingBoxEventArgs e)
