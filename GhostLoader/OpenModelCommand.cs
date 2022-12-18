@@ -7,32 +7,12 @@ using Rhino.Input;
 using Rhino.Input.Custom;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace GhostLoader
 {
-
-    public sealed class GeomCache
-    {
-        public BoundingBox Box { get; set; }
-
-        public GeometryBase Geometry { get; set; }
-
-        public Color Color { get; set; }
-
-        public Point3d Cent { get; set; }
-
-        public GeomCache(GeometryBase geom, Color color)
-        {
-            Geometry = geom;
-            Color = color;
-            Box = geom.GetBoundingBox(false);
-            Cent = Box.Center;
-        }
-    }
 
     public sealed class OpenModelCommand : Rhino.Commands.Command
     {
