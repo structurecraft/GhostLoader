@@ -15,6 +15,11 @@ namespace GhostLoader
 
     internal sealed class GhostPipeline
     {
+        const double EVENT_HORIZON = 750_000;
+        const double HORIZON = 500_000;
+        const double LOW_DETAIL = 250_000;
+        const double MEDIUM_DETAIL = 50_000;
+        const double HIGH_DETAIL = 25_000;
 
         internal static GhostPipeline Instance { get; set; }
 
@@ -58,68 +63,92 @@ namespace GhostLoader
         {
             BoundingBox cameraBox = e.Display.Viewport.GetFrustumBoundingBox();
 
-            IEnumerable<GeomCache> cacheItems = DrawingItems.SelectMany(kvp => kvp.Value).OrderBy(c => c.Color.ToArgb()).ToArray();
+            IEnumerable<GeomCache> cacheItems = DrawingItems.SelectMany(kvp => kvp.Value)  // Put all geometry together
+                                                .OrderBy(c => c.Color.ToArgb()) // Optimises for Pipeline
+                                                .ToArray();                     // Ensure there is a copy
+            
             var enumer = cacheItems.GetEnumerator();
-
             while(enumer.MoveNext())
             {
                 GeomCache cache = enumer.Current;
-                GeometryBase geom = cache.Geometry;
-                BoundingBox box = cache.Box;
-                Color color = cache.Color;
-                Point3d cent = cache.Cent;
 
-                if (!cameraBox.Contains(cent)) continue;
+                // Don't draw anything outside the Camera
+                if (!cameraBox.Contains(cache.Cent)) continue;
 
-                double dist = e.Viewport.CameraLocation.DistanceTo(cent);
-                if (dist > 750_000) continue;
+                double dist = e.Viewport.CameraLocation.DistanceTo(cache.Cent);
 
-                if (color != dMaterial?.Diffuse)
+                if (cache.Color != dMaterial?.Diffuse)
                 {
-                    dMaterial = new DisplayMaterial(color);
+                    dMaterial = new DisplayMaterial(cache.Color);
                 }
 
-                if (dist > 250_000)
+                if (dist < HIGH_DETAIL)
                 {
-                    Line line = new Line(box.PointAt(0, 0.5, 0.5), box.PointAt(1, 0.5, 0.5));
-                    e.Display.DrawLine(line, color, 1);
+                    _DrawHighDetail(e, cache);
+                }
+                else if (dist < MEDIUM_DETAIL)
+                {
+                    _DrawMediumDetail(e, cache);
+                }
+                else if (dist < LOW_DETAIL)
+                {
+                    _DrawLowDetail(e, cache);
+                }
+                else if (dist < HORIZON)
+                {
+                    _DrawHorizonDetail(e, cache);
+                }
+                else // EVENT_HORIZON
+                {
                     continue;
-                }
-                else if (dist > 500_000)
-                {
-                    e.Display.DrawBox(box, color, 1);
-                    continue;
-                }
-
-                if (geom is Curve curve)
-                {
-                    e.Display.DrawCurve(curve, color);
-                }
-                else if (geom is Brep brep)
-                {
-                    if (dist > 50_000)
-                    {
-                        e.Display.DrawBrepWires(brep, color);
-                    }
-                    else
-                    {
-                        e.Display.DrawBrepShaded(brep, dMaterial);
-                    }
-                }
-                else if (geom is Mesh mesh)
-                {
-                    if (dist > 50_000)
-                    {
-                        e.Display.DrawMeshWires(mesh, color);
-                    }
-                    else
-                    {
-                        e.Display.DrawMeshShaded(mesh, dMaterial);
-                    }
                 }
 
             }
 
+        }
+
+        private void _DrawHighDetail(DrawEventArgs e, GeomCache cache)
+        {
+            if (cache.Geometry is Curve curve)
+            {
+                e.Display.DrawCurve(curve, cache.Color);
+            }
+            else if (cache.Geometry is Brep brep)
+            {
+                e.Display.DrawBrepShaded(brep, dMaterial);
+            }
+            else if (cache.Geometry is Mesh mesh)
+            {
+                e.Display.DrawMeshShaded(mesh, dMaterial);
+            }
+        }
+
+        private void _DrawMediumDetail(DrawEventArgs e, GeomCache cache)
+        {
+            if (cache.Geometry is Curve curve)
+            {
+                e.Display.DrawCurve(curve, cache.Color);
+            }
+            else if (cache.Geometry is Brep brep)
+            {
+                e.Display.DrawBrepWires(brep, cache.Color);
+            }
+            else if (cache.Geometry is Mesh mesh)
+            {
+                e.Display.DrawMeshWires(mesh, cache.Color);
+            }
+        }
+
+        private void _DrawLowDetail(DrawEventArgs e, GeomCache cache)
+        {
+            Line line = new Line(cache.Box.PointAt(0, 0.5, 0.5), cache.Box.PointAt(1, 0.5, 0.5));
+            e.Display.DrawLine(line, cache.Color, 1);
+        }
+
+        private void _DrawHorizonDetail(DrawEventArgs e, GeomCache cache)
+        {
+            // TODO : Box needs to be better aligned
+            e.Display.DrawBox(cache.Box, cache.Color, 1);
         }
 
         public void CalculateBoundingBox(object sender, CalculateBoundingBoxEventArgs e)
@@ -140,7 +169,7 @@ namespace GhostLoader
             if (!DrawingItems.TryGetValue(document, out IEnumerable<GeomCache> geometry)) return;
             foreach(GeomCache geom in geometry)
             {
-                modelBox.Union(geom.Box);
+                modelBox.Union(geom.Box.BoundingBox);
             }
 
             _bbox = modelBox;
